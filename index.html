@@ -690,7 +690,6 @@
             <div class="header-row">
                 <div class="header-title">
                     <h1>MediaKit 视频超分工具</h1>
-                    <p>上传视频或填写公网地址，提交火山 MediaKit 超分任务并自动轮询结果。</p>
                 </div>
                 <div class="header-actions">
                     <button class="btn icon-btn" id="settingsBtn">设置</button>
@@ -787,7 +786,6 @@
                         <button class="btn btn-secondary" id="queryManualBtn">按任务 ID 手动查询</button>
                         <input type="text" id="manualTaskId" placeholder="输入任务 ID 后查询" style="flex:1; min-width: 220px;">
                     </div>
-                    <div class="footnote">接口路径和字段路径已按文档写死，设置里仅保留常用运行参数。</div>
                 </section>
 
                 <section class="card">
@@ -839,7 +837,6 @@
             <div class="modal-header">
                 <div>
                     <h2>设置</h2>
-                    <div class="subtle">仅保留常用运行参数，接口细节已内置</div>
                 </div>
                 <button class="modal-close" id="closeSettingsBtn">×</button>
             </div>
@@ -874,11 +871,6 @@
                         <label for="historyLimit">历史记录上限</label>
                         <input type="number" id="historyLimit" min="1" max="100" value="30">
                     </div>
-                </div>
-                <div class="tips">
-                    <div>建议用本目录的 `启动工具.bat` 或 `python server.py` 启动后，在浏览器打开 `http://127.0.0.1:38473` 使用。</div>
-                    <div>内置接口：提交 `POST /api/v1/tools/enhance-video`，查询 `GET /api/v1/tasks/{task_id}`。</div>
-                    <div>内置结果解析：任务 ID `task_id`，状态 `status`，结果地址 `result.video_url`。</div>
                 </div>
             </div>
             <div class="modal-footer">
