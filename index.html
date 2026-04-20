@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaKit 视频超分工具</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --primary: #19b24b;
+            --primary-hover: #24cf5c;
+            --success: #00b42a;
+            --warning: #ff7d00;
+            --danger: #f53f3f;
+            --bg: #f3f9f4;
+            --card-bg: #ffffff;
+            --border: #d4e8d8;
+            --text: #132018;
+            --text-secondary: #4f6a58;
+            --radius: 10px;
+            --shadow: 0 12px 32px rgba(15, 61, 27, 0.08);
+            --chip-bg: rgba(25, 178, 75, 0.12);
+            --chip-border: rgba(25, 178, 75, 0.35);
+            --chip-text: #16993f;
+            --header-grad-start: #0f7f36;
+            --header-grad-end: #1ec85a;
+            --input-bg: #ffffff;
+            --muted-bg: #eef7ef;
+            --hover-bg: #e2f5e6;
+            --panel-dark: #101612;
+            --debug-text: #60ffa3;
+        }
+
+        :root[data-theme="dark"] {
+            --primary: #21c45a;
+            --primary-hover: #33db6e;
+            --success: #2ccd64;
+            --warning: #ffb142;
+            --danger: #ff6b6b;
+            --bg: #07110a;
+            --card-bg: #0d1a10;
+            --border: #1b3825;
+            --text: #d5f3df;
+            --text-secondary: #84b596;
+            --shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+            --chip-bg: rgba(33, 196, 90, 0.16);
+            --chip-border: rgba(33, 196, 90, 0.4);
+            --chip-text: #7ef3ad;
+            --header-grad-start: #041f0e;
+            --header-grad-end: #0f6f33;
+            --input-bg: #0a170e;
+            --muted-bg: #102014;
+            --hover-bg: #14301d;
+            --panel-dark: #020504;
+            --debug-text: #4dff96;
+        }
+
+        body {
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(25, 178, 75, 0.12), transparent 30%),
+                radial-gradient(circle at top right, rgba(30, 200, 90, 0.08), transparent 24%),
+                var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--header-grad-start) 0%, var(--header-grad-end) 100%);
+            color: #fff;
+            border-radius: 18px;
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::after {
+            content: "";
+            position: absolute;
+            inset: auto -40px -60px auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            filter: blur(8px);
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-title h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .header-title p {
+            max-width: 760px;
+            opacity: 0.95;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar-card {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        .card-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title h2,
+        .card-title h3 {
+            font-size: 1.08rem;
+        }
+
+        .subtle {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .grid-2,
+        .grid-3 {
+            display: grid;
+            gap: 14px;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--text);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 96px;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(25, 178, 75, 0.12);
+        }
+
+        .row-inline {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .checkbox {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .checkbox input {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font: inherit;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: var(--muted-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.16);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .upload-box {
+            border: 1.5px dashed var(--border);
+            background: linear-gradient(180deg, var(--muted-bg), transparent);
+            border-radius: 14px;
+            padding: 18px;
+        }
+
+        .upload-dropzone {
+            border: 1.5px dashed var(--primary);
+            border-radius: 14px;
+            background: rgba(25, 178, 75, 0.05);
+            padding: 22px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+        }
+
+        .upload-dropzone:hover,
+        .upload-dropzone.dragover {
+            background: rgba(25, 178, 75, 0.12);
+            border-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .upload-dropzone strong {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+
+        .upload-dropzone span {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .tips {
+            display: grid;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--muted-bg);
+            cursor: pointer;
+            user-select: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .tab-item.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .task-list,
+        .log-list,
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .sidebar-scroll {
+            overflow-y: auto;
+            min-height: 0;
+            padding-right: 2px;
+        }
+
+        .task-item,
+        .log-item,
+        .history-item {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            background: color-mix(in srgb, var(--card-bg) 88%, var(--muted-bg) 12%);
+        }
+
+        .task-item.status-succeeded {
+            border-color: rgba(0, 180, 42, 0.35);
+        }
+
+        .task-item.status-failed {
+            border-color: rgba(245, 63, 63, 0.35);
+        }
+
+        .task-head,
+        .log-head,
+        .history-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .task-id {
+            font-weight: 700;
+            word-break: break-all;
+        }
+
+        .task-status {
+            font-size: 12px;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .task-status.pending,
+        .task-status.running {
+            background: rgba(255, 125, 0, 0.16);
+            color: #b85c00;
+        }
+
+        .task-status.succeeded {
+            background: rgba(0, 180, 42, 0.16);
+            color: #15803d;
+        }
+
+        .task-status.failed {
+            background: rgba(245, 63, 63, 0.16);
+            color: #b91c1c;
+        }
+
+        .task-meta,
+        .log-details,
+        .history-meta {
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .task-actions,
+        .history-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .history-actions {
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .task-summary {
+            display: grid;
+            gap: 8px;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        .history-item {
+            padding: 12px;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-thumb {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .history-thumb video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .history-title {
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.45;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            overflow: hidden;
+            min-height: 61px;
+        }
+
+        .history-topline {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .history-time {
+            flex: 0 0 auto;
+            text-align: right;
+            color: var(--text-secondary);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .history-brief {
+            color: var(--text-secondary);
+            font-size: 12px;
+            min-height: 18px;
+            margin-bottom: 10px;
+        }
+
+        .collapse-toggle {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .collapsible {
+            display: none;
+        }
+
+        .collapsible.open {
+            display: block;
+        }
+
+        .detail-pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .debug-box,
+        .response-box,
+        .preview-box {
+            background: var(--panel-dark);
+            color: var(--debug-text);
+            border-radius: 10px;
+            padding: 10px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 260px;
+            overflow: auto;
+            margin-top: 10px;
+        }
+
+        .log-item.type-error {
+            border-color: rgba(245, 63, 63, 0.35);
+        }
+
+        .log-item.type-success {
+            border-color: rgba(0, 180, 42, 0.35);
+        }
+
+        .empty-state {
+            padding: 24px 12px;
+            text-align: center;
+            color: var(--text-secondary);
+            border: 1px dashed var(--border);
+            border-radius: 14px;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal-dialog {
+            width: min(920px, 100%);
+            max-height: 88vh;
+            overflow: auto;
+            background: var(--card-bg);
+            color: var(--text);
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+            border: 1px solid var(--border);
+        }
+
+        .modal-header,
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border);
+            border-bottom: none;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 26px;
+            cursor: pointer;
+        }
+
+        .video-preview {
+            width: 100%;
+            max-height: 360px;
+            border-radius: 14px;
+            background: #000;
+        }
+
+        .link-output {
+            display: grid;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .link-output a {
+            color: var(--primary);
+            word-break: break-all;
+        }
+
+        .footnote {
+            margin-top: 10px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .page-footer {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            padding: 8px 0 20px;
+        }
+
+        .page-footer a {
+            color: var(--primary);
+        }
+
+        @media (max-width: 1180px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .grid-2,
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .header-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-row">
+                <div class="header-title">
+                    <h1>MediaKit 视频超分工具</h1>
+                    <p>上传视频或填写公网地址，提交火山 MediaKit 超分任务并自动轮询结果。</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn icon-btn" id="settingsBtn">设置</button>
+                    <button class="btn icon-btn" id="exportBtn">导出配置</button>
+                    <button class="btn icon-btn" id="importBtn">导入配置</button>
+                    <input type="file" id="importFile" accept=".json" hidden>
+                </div>
+            </div>
+        </header>
+
+        <div class="layout">
+            <main class="stack">
+                <section class="card">
+                    <div class="card-title">
+                        <h2>提交任务</h2>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="upload-box">
+                            <div class="form-group">
+                                <label for="videoUrl">视频 URL</label>
+                                <input type="text" id="videoUrl" placeholder="填写可公网访问的视频地址，或先上传本地文件">
+                            </div>
+                            <div class="form-group">
+                                <label for="videoFile">本地视频上传到 Litterbox</label>
+                                <div class="upload-dropzone" id="uploadDropzone" tabindex="0">
+                                    <strong>拖拽视频到这里，或点击选择文件</strong>
+                                    <span>支持 Ctrl+V 粘贴视频文件，选中后会自动上传到 Litterbox</span>
+                                </div>
+                                <input type="file" id="videoFile" accept="video/*" hidden>
+                            </div>
+                            <div class="row-inline">
+                                <button class="btn btn-secondary" id="clearSourceBtn">清空源视频</button>
+                            </div>
+                            <div class="preview-box" id="uploadPreviewBox">这里会显示上传结果、文件信息或上传错误。</div>
+                        </div>
+
+                        <div>
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label for="scene">增强场景</label>
+                                    <select id="scene">
+                                        <option value="aigc" selected>AIGC</option>
+                                        <option value="short_series">短剧</option>
+                                        <option value="ugc">UGC 短视频</option>
+                                        <option value="old_film">老片修复</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="resolution">输出分辨率</label>
+                                    <select id="resolution">
+                                        <option value="origin">原分辨率</option>
+                                        <option value="720p">720P</option>
+                                        <option value="1080p" selected>1080P</option>
+                                        <option value="2k">2K</option>
+                                        <option value="4k">4K</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="toolVersion">工具版本</label>
+                                    <select id="toolVersion">
+                                        <option value="standard" selected>标准版</option>
+                                        <option value="professional">专业版</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="frameRate">输出帧率</label>
+                                    <input type="number" id="frameRate" min="1" max="120" placeholder="留空表示原帧率">
+                                </div>
+                                <div class="form-group">
+                                    <label for="resolutionLimit">短边像素限制</label>
+                                    <input type="number" id="resolutionLimit" min="64" max="2160" step="1" placeholder="与分辨率二选一">
+                                </div>
+                            </div>
+
+                            <div class="row-inline" style="margin-bottom: 12px;">
+                                <label class="checkbox"><input type="checkbox" id="autoOpenResult" checked> 成功后自动预览结果</label>
+                                <label class="checkbox"><input type="checkbox" id="autoDownload"> 成功后自动下载结果</label>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding:16px; margin-top:16px; background: var(--muted-bg);">
+                        <div class="card-title" style="margin-bottom:12px; padding-bottom:8px;">
+                            <h3>请求预览</h3>
+                            <button class="btn btn-secondary btn-sm" id="refreshPreviewBtn">刷新预览</button>
+                        </div>
+                        <div class="debug-box" id="requestPreview">尚未生成请求体。</div>
+                    </div>
+
+                    <div class="row-inline" style="margin-top: 16px;">
+                        <button class="btn btn-primary" id="submitBtn">提交超分任务</button>
+                        <button class="btn btn-secondary" id="queryManualBtn">按任务 ID 手动查询</button>
+                        <input type="text" id="manualTaskId" placeholder="输入任务 ID 后查询" style="flex:1; min-width: 220px;">
+                    </div>
+                    <div class="footnote">接口路径和字段路径已按文档写死，设置里仅保留常用运行参数。</div>
+                </section>
+
+                <section class="card">
+                    <div class="card-title">
+                        <h2>结果预览</h2>
+                        <span class="subtle">成功后会写入历史记录</span>
+                    </div>
+                    <video id="resultVideo" class="video-preview" controls></video>
+                    <div class="link-output" id="resultLinks">
+                        <div class="empty-state">暂无结果视频</div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-title">
+                        <h2>历史记录</h2>
+                        <div class="row-inline">
+                            <span class="subtle">自动持久化到浏览器本地</span>
+                            <button class="btn btn-danger btn-sm" id="clearHistoryBtn">清空历史</button>
+                        </div>
+                    </div>
+                    <div class="history-list" id="historyList"></div>
+                </section>
+            </main>
+
+            <aside class="card sidebar-card">
+                <div class="card-title">
+                    <h2>任务侧栏</h2>
+                    <button class="btn btn-secondary btn-sm" id="clearCurrentTabBtn">清空当前</button>
+                </div>
+                <div class="sidebar-tabs">
+                    <div class="tab-item active" data-tab="tasks">任务</div>
+                    <div class="tab-item" data-tab="logs">日志</div>
+                </div>
+                <div class="sidebar-scroll">
+                    <div class="task-list" id="taskList"></div>
+                    <div class="log-list" id="logList" style="display:none;"></div>
+                </div>
+            </aside>
+        </div>
+        <div class="page-footer">
+            源文档：
+            <a href="https://www.volcengine.com/docs/6448/2279961?lang=zh" target="_blank" rel="noreferrer">https://www.volcengine.com/docs/6448/2279961?lang=zh</a>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="settingsModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div>
+                    <h2>设置</h2>
+                    <div class="subtle">仅保留常用运行参数，接口细节已内置</div>
+                </div>
+                <button class="modal-close" id="closeSettingsBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="apiKey">火山 API Key</label>
+                        <input type="password" id="apiKey" placeholder="Bearer Token">
+                    </div>
+                    <div class="form-group">
+                        <label for="baseUrl">接口域名</label>
+                        <input type="text" id="baseUrl" placeholder="https://api.example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="litterboxExpiry">Litterbox 过期时间</label>
+                        <select id="litterboxExpiry">
+                            <option value="1h">1 小时</option>
+                            <option value="12h">12 小时</option>
+                            <option value="24h" selected>24 小时</option>
+                            <option value="72h">72 小时</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pollInterval">轮询间隔（秒）</label>
+                        <input type="number" id="pollInterval" min="5" max="300" value="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskLimit">任务记录上限</label>
+                        <input type="number" id="taskLimit" min="1" max="100" value="30">
+                    </div>
+                    <div class="form-group">
+                        <label for="historyLimit">历史记录上限</label>
+                        <input type="number" id="historyLimit" min="1" max="100" value="30">
+                    </div>
+                </div>
+                <div class="tips">
+                    <div>建议用本目录的 `启动工具.bat` 或 `python server.py` 启动后，在浏览器打开 `http://127.0.0.1:38473` 使用。</div>
+                    <div>内置接口：提交 `POST /api/v1/tools/enhance-video`，查询 `GET /api/v1/tasks/{task_id}`。</div>
+                    <div>内置结果解析：任务 ID `task_id`，状态 `status`，结果地址 `result.video_url`。</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="resetStorageBtn">清空本地数据</button>
+                <div class="row-inline">
+                    <button class="btn btn-primary" id="saveSettingsBtn">保存设置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="historyDetailModal">
+        <div class="modal-dialog" style="width:min(560px, 100%);">
+            <div class="modal-header">
+                <div>
+                    <h2 id="historyDetailTitle">历史参数</h2>
+                    <div class="subtle" id="historyDetailTime"></div>
+                </div>
+                <button class="modal-close" id="closeHistoryDetailBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-pre" id="historyDetailContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEYS = {
+            config: "mediakit_sr_config",
+            tasks: "mediakit_sr_tasks",
+            logs: "mediakit_sr_logs",
+            history: "mediakit_sr_history"
+        };
+
+        const defaults = {
+            apiKey: "",
+            baseUrl: "http://127.0.0.1:38473/proxy/amk",
+            submitPath: "/api/v1/tools/enhance-video",
+            queryPath: "/api/v1/tasks/{{taskId}}",
+            litterboxExpiry: "24h",
+            pollInterval: "10",
+            taskLimit: "30",
+            historyLimit: "30",
+            scene: "aigc",
+            resolution: "1080p",
+            toolVersion: "standard",
+            frameRate: "",
+            resolutionLimit: "",
+            autoOpenResult: true,
+            autoDownload: false,
+        };
+
+        let appConfig = {};
+        let appLogs = [];
+        let activeTasks = new Map();
+        let currentSidebarTab = "tasks";
+        let selectedUploadFile = null;
+        let isUploadingToLitterbox = false;
+
+        const $ = (id) => document.getElementById(id);
+
+        function escapeHtml(text) {
+            return String(text ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        }
+
+        function safeJsonParse(text, fallback) {
+            try {
+                return JSON.parse(text);
+            } catch (error) {
+                return fallback;
+            }
+        }
+
+        function readStorage(key, fallback) {
+            return safeJsonParse(localStorage.getItem(key) || "", fallback);
+        }
+
+        function writeStorage(key, value) {
+            localStorage.setItem(key, JSON.stringify(value));
+        }
+
+        function getValueByPath(source, path) {
+            if (!path) return source;
+            return path.split(".").reduce((acc, key) => {
+                if (acc === undefined || acc === null) return undefined;
+                const match = key.match(/^(.+)\[(\d+)\]$/);
+                if (match) {
+                    const arr = acc[match[1]];
+                    return Array.isArray(arr) ? arr[Number(match[2])] : undefined;
+                }
+                return acc[key];
+            }, source);
+        }
+
+        function normalizeStatus(status) {
+            const value = String(status || "").toLowerCase();
+            if (["success", "succeeded", "done", "finished", "completed"].includes(value)) return "succeeded";
+            if (["fail", "failed", "error", "canceled", "cancelled"].includes(value)) return "failed";
+            if (["running", "processing", "pending", "queued", "created", "submitted"].includes(value)) return value === "pending" ? "pending" : "running";
+            return value || "pending";
+        }
+
+        function formatDuration(ms) {
+            if (!ms || ms < 0) return "-";
+            const total = Math.floor(ms / 1000);
+            const h = Math.floor(total / 3600);
+            const m = Math.floor((total % 3600) / 60);
+            const s = total % 60;
+            if (h > 0) return `${h}h${String(m).padStart(2, "0")}m${String(s).padStart(2, "0")}s`;
+            if (m > 0) return `${m}m${String(s).padStart(2, "0")}s`;
+            return `${s}s`;
+        }
+
+        function buildUrl(baseUrl, path, vars = {}) {
+            const interpolated = interpolateTemplate(path, vars, false);
+            if (/^https?:\/\//i.test(interpolated)) return interpolated;
+            return `${String(baseUrl || "").replace(/\/+$/, "")}/${String(interpolated || "").replace(/^\/+/, "")}`;
+        }
+
+        function interpolateTemplate(template, vars, asJson = true) {
+            const replaced = String(template || "").replace(/\{\{\s*([\w]+)\s*\}\}/g, (_, key) => {
+                const value = vars[key];
+                if (value === undefined || value === null || value === "") return "";
+                return String(value);
+            });
+            if (!asJson) return replaced;
+            return replaced;
+        }
+
+        function removeEmptyFields(value) {
+            if (Array.isArray(value)) {
+                return value.map(removeEmptyFields).filter((item) => item !== undefined);
+            }
+            if (value && typeof value === "object") {
+                const next = {};
+                Object.entries(value).forEach(([key, val]) => {
+                    const normalized = removeEmptyFields(val);
+                    if (normalized !== undefined && normalized !== "") next[key] = normalized;
+                });
+                return Object.keys(next).length ? next : undefined;
+            }
+            if (value === "" || value === null) return undefined;
+            if (value === "true") return true;
+            if (value === "false") return false;
+            if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value)) return Number(value);
+            return value;
+        }
+
+        function openSettingsModal() {
+            $("settingsModal").classList.add("active");
+        }
+
+        function closeSettingsModal() {
+            $("settingsModal").classList.remove("active");
+        }
+
+        function gatherSettingsFromForm() {
+            return {
+                apiKey: $("apiKey").value.trim(),
+                baseUrl: $("baseUrl").value.trim(),
+                litterboxExpiry: $("litterboxExpiry").value,
+                pollInterval: $("pollInterval").value,
+                taskLimit: $("taskLimit").value,
+                historyLimit: $("historyLimit").value
+            };
+        }
+
+        function gatherMainFormState() {
+            return {
+                scene: $("scene").value,
+                resolution: $("resolution").value,
+                toolVersion: $("toolVersion").value,
+                frameRate: $("frameRate").value.trim(),
+                resolutionLimit: $("resolutionLimit").value.trim(),
+                autoOpenResult: $("autoOpenResult").checked,
+                autoDownload: $("autoDownload").checked
+            };
+        }
+
+        function applySettingsToForm(config) {
+            Object.entries(config).forEach(([key, value]) => {
+                const el = $(key);
+                if (el) el.value = value ?? "";
+            });
+        }
+
+        function applyMainFormState(config) {
+            $("scene").value = config.scene ?? defaults.scene;
+            $("resolution").value = config.resolution ?? defaults.resolution;
+            $("toolVersion").value = config.toolVersion ?? defaults.toolVersion;
+            $("frameRate").value = config.frameRate ?? defaults.frameRate;
+            $("resolutionLimit").value = config.resolutionLimit ?? defaults.resolutionLimit;
+            $("autoOpenResult").checked = config.autoOpenResult !== false;
+            $("autoDownload").checked = Boolean(config.autoDownload);
+        }
+
+        function saveConfig() {
+            appConfig = { ...defaults, ...gatherSettingsFromForm(), ...gatherMainFormState() };
+            writeStorage(STORAGE_KEYS.config, appConfig);
+            updateRequestPreview();
+        }
+
+        function loadConfig() {
+            appConfig = { ...defaults, ...readStorage(STORAGE_KEYS.config, {}) };
+            applySettingsToForm(appConfig);
+            applyMainFormState(appConfig);
+        }
+
+        function saveLogs() {
+            writeStorage(STORAGE_KEYS.logs, appLogs);
+        }
+
+        function addLog(type, message, details = "", extra = {}) {
+            const log = {
+                id: `log-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+                type,
+                time: new Date().toISOString(),
+                message,
+                details,
+                ...extra
+            };
+            appLogs.unshift(log);
+            if (appLogs.length > 500) appLogs = appLogs.slice(0, 500);
+            saveLogs();
+            renderLogs();
+        }
+
+        function loadLogs() {
+            appLogs = readStorage(STORAGE_KEYS.logs, []);
+            renderLogs();
+        }
+
+        function renderLogs() {
+            const list = $("logList");
+            if (!appLogs.length) {
+                list.innerHTML = '<div class="empty-state">暂无日志</div>';
+                return;
+            }
+            list.innerHTML = appLogs.map((log) => `
+                <div class="log-item type-${escapeHtml(log.type)}">
+                    <div class="log-head">
+                        <strong>${escapeHtml(log.message)}</strong>
+                        <span class="subtle">${new Date(log.time).toLocaleString()}</span>
+                    </div>
+                    <div class="log-details">${escapeHtml(log.details || "")}</div>
+                </div>
+            `).join("");
+        }
+
+        function collectTaskDraft() {
+            return {
+                videoUrl: $("videoUrl").value.trim(),
+                scene: $("scene").value,
+                resolution: $("resolution").value,
+                toolVersion: $("toolVersion").value,
+                frameRate: $("frameRate").value.trim(),
+                resolutionLimit: $("resolutionLimit").value.trim(),
+                clientTaskId: `client-${Date.now()}`,
+                autoOpenResult: $("autoOpenResult").checked,
+                autoDownload: $("autoDownload").checked
+            };
+        }
+
+        function buildSubmitPayload(taskDraft) {
+            const payload = {
+                video_url: taskDraft.videoUrl,
+                scene: taskDraft.scene,
+                resolution: taskDraft.resolution,
+                resolution_limit: taskDraft.resolutionLimit,
+                fps: taskDraft.frameRate,
+                tool_version: taskDraft.toolVersion
+            };
+            return removeEmptyFields(payload) || {};
+        }
+
+        function buildQueryPayload(taskId) {
+            return { task_id: taskId };
+        }
+
+        function updateRequestPreview() {
+            try {
+                const draft = collectTaskDraft();
+                const payload = buildSubmitPayload(draft);
+                $("requestPreview").textContent = JSON.stringify(payload, null, 2);
+            } catch (error) {
+                $("requestPreview").textContent = `请求体模板解析失败：${error.message}`;
+            }
+        }
+
+        function setUploadPreview(message) {
+            $("uploadPreviewBox").textContent = message;
+        }
+
+        function setSelectedUploadFile(file) {
+            selectedUploadFile = file || null;
+            if (!selectedUploadFile) {
+                setUploadPreview("可直接填写视频 URL，或拖拽 / 点击 / Ctrl+V 粘贴视频后上传到 Litterbox。");
+                return;
+            }
+            setUploadPreview(`已选择文件\n名称: ${selectedUploadFile.name}\n大小: ${(selectedUploadFile.size / 1024 / 1024).toFixed(2)} MB\n类型: ${selectedUploadFile.type || "未知"}`);
+        }
+
+        function setUploadBusyState(busy, fileName = "") {
+            isUploadingToLitterbox = busy;
+            $("uploadDropzone").style.pointerEvents = busy ? "none" : "auto";
+            $("uploadDropzone").style.opacity = busy ? "0.7" : "1";
+            if (busy) {
+                if (fileName) {
+                    $("uploadPreviewBox").textContent = `上传中...\n文件: ${fileName}`;
+                }
+            }
+        }
+
+        function getFirstVideoFileFromItems(items) {
+            if (!items) return null;
+            for (const item of items) {
+                const file = item.kind === "file" ? item.getAsFile() : item;
+                if (file && String(file.type || "").startsWith("video/")) {
+                    return file;
+                }
+            }
+            return null;
+        }
+
+        async function uploadToLitterbox() {
+            if (isUploadingToLitterbox) return;
+            const file = selectedUploadFile || $("videoFile").files[0];
+            if (!file) {
+                setUploadPreview("请先拖拽、选择或粘贴一个本地视频文件。", false);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("reqtype", "fileupload");
+            formData.append("time", $("litterboxExpiry").value);
+            formData.append("fileToUpload", file);
+
+            setUploadBusyState(true, file.name);
+            setUploadPreview(`上传中...\n文件: ${file.name}\n大小: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+            addLog("info", "开始上传到 Litterbox", file.name);
+
+            try {
+                const response = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", {
+                    method: "POST",
+                    body: formData
+                });
+                const text = (await response.text()).trim();
+                if (!response.ok || !/^https?:\/\//i.test(text)) {
+                    throw new Error(text || `HTTP ${response.status}`);
+                }
+                $("videoUrl").value = text;
+                $("videoFile").value = "";
+                selectedUploadFile = null;
+                setUploadPreview(`上传成功\n文件: ${file.name}\nURL: ${text}`);
+                updateRequestPreview();
+                addLog("success", "Litterbox 上传成功", text);
+            } catch (error) {
+                setUploadPreview(`上传失败：${error.message}`, false);
+                addLog("error", "Litterbox 上传失败", error.message);
+            } finally {
+                setUploadBusyState(false);
+            }
+        }
+
+        function saveTasks() {
+            const records = Array.from(activeTasks.values()).map((task) => ({
+                ...task,
+                timer: null
+            }));
+            writeStorage(STORAGE_KEYS.tasks, records);
+        }
+
+        function trimTasks() {
+            const limit = Number(appConfig.taskLimit || defaults.taskLimit);
+            const entries = Array.from(activeTasks.entries());
+            if (entries.length <= limit) return;
+            const removable = entries.filter(([, task]) => ["succeeded", "failed"].includes(task.status));
+            while (activeTasks.size > limit && removable.length) {
+                const [taskId, task] = removable.shift();
+                if (task.timer) clearInterval(task.timer);
+                activeTasks.delete(taskId);
+            }
+        }
+
+        function renderTasks() {
+            const list = $("taskList");
+            const tasks = Array.from(activeTasks.values()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            if (!tasks.length) {
+                list.innerHTML = '<div class="empty-state">暂无任务</div>';
+                return;
+            }
+
+            list.innerHTML = tasks.map((task) => {
+                const elapsed = task.finishedAt
+                    ? formatDuration(new Date(task.finishedAt) - new Date(task.createdAt))
+                    : formatDuration(Date.now() - new Date(task.createdAt));
+                const request = escapeHtml(task.requestLog || "");
+                const response = escapeHtml(task.responseLog || "");
+                const resultLink = task.resultUrl ? `<a href="${task.resultUrl}" target="_blank" rel="noreferrer">${escapeHtml(task.resultUrl)}</a>` : "暂无";
+                return `
+                    <div class="task-item status-${escapeHtml(task.status)}">
+                        <div class="task-head">
+                            <div class="task-id">${escapeHtml(task.id)}</div>
+                            <span class="task-status ${escapeHtml(task.status)}">${escapeHtml(task.status)}</span>
+                        </div>
+                        <div class="task-summary">
+                            <div class="task-meta">场景: ${escapeHtml(task.scene || "-")} · 版本: ${escapeHtml(task.toolVersion || "-")}</div>
+                            <div class="task-meta">分辨率: ${escapeHtml(task.resolution || "原分辨率")} · 帧率: ${escapeHtml(task.frameRate || "原帧率")} · 耗时: ${escapeHtml(elapsed)}</div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="queryTaskNow('${task.id}')">立即查询</button>
+                            <button class="btn btn-secondary btn-sm collapse-toggle" onclick="toggleTaskDetails('${task.id}')">${task.showDetails ? "收起详情" : "展开详情"}</button>
+                            ${task.resultUrl ? `<button class="btn btn-success btn-sm" onclick="previewResultFromTask('${task.id}')">预览结果</button>` : ""}
+                            <button class="btn btn-danger btn-sm" onclick="removeTask('${task.id}')">删除</button>
+                        </div>
+                        <div class="collapsible ${task.showDetails ? "open" : ""}">
+                            <div class="task-meta" style="margin-top:8px;">结果链接: ${resultLink}</div>
+                            <div class="debug-box">请求\n${request}</div>
+                            <div class="response-box" id="task-response-${task.id}">响应\n${response}</div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function loadTasks() {
+            const records = readStorage(STORAGE_KEYS.tasks, []);
+            records.forEach((task) => {
+                task.timer = null;
+                task.showDetails = Boolean(task.showDetails);
+                activeTasks.set(task.id, task);
+            });
+            renderTasks();
+            activeTasks.forEach((task) => {
+                if (task.status === "running" || task.status === "pending") {
+                    startPolling(task.id);
+                }
+            });
+        }
+
+        function createTaskRecord(taskId, draft, payload, responseData) {
+            const record = {
+                id: taskId,
+                status: "pending",
+                createdAt: new Date().toISOString(),
+                finishedAt: null,
+                scene: draft.scene,
+                toolVersion: draft.toolVersion,
+                resolution: draft.resolution,
+                frameRate: draft.frameRate,
+                videoUrl: draft.videoUrl,
+                requestLog: JSON.stringify(payload, null, 2),
+                responseLog: JSON.stringify(responseData, null, 2),
+                resultUrl: "",
+                showDetails: false,
+                autoOpenResult: draft.autoOpenResult,
+                autoDownload: draft.autoDownload,
+                timer: null
+            };
+            activeTasks.set(taskId, record);
+            trimTasks();
+            saveTasks();
+            renderTasks();
+            return record;
+        }
+
+        async function submitTask() {
+            saveConfig();
+            const draft = collectTaskDraft();
+            if (!draft.videoUrl) {
+                alert("请先填写视频 URL 或上传本地视频。");
+                return;
+            }
+
+            let payload;
+            try {
+                payload = buildSubmitPayload(draft);
+            } catch (error) {
+                alert(`提交请求体模板解析失败：${error.message}`);
+                return;
+            }
+
+            const url = buildUrl(appConfig.baseUrl, "/api/v1/tools/enhance-video");
+            const headers = {
+                "Content-Type": "application/json"
+            };
+            if (appConfig.apiKey) headers.Authorization = `Bearer ${appConfig.apiKey}`;
+
+            addLog("info", "开始提交超分任务", `${draft.videoUrl}\n提交地址: ${url}`);
+
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+                const text = await response.text();
+                const data = safeJsonParse(text, { raw: text });
+                if (!response.ok) {
+                    throw new Error(typeof data === "object" ? JSON.stringify(data, null, 2) : text);
+                }
+
+                const taskId = getValueByPath(data, "task_id") || `manual-${Date.now()}`;
+                createTaskRecord(taskId, draft, payload, data);
+                addLog("success", "超分任务提交成功", `任务 ID: ${taskId}`);
+                startPolling(taskId);
+            } catch (error) {
+                addLog("error", "超分任务提交失败", error.message);
+                alert(`提交失败：${error.message}`);
+            }
+        }
+
+        function appendTaskResponse(taskId, data) {
+            const task = activeTasks.get(taskId);
+            if (!task) return;
+            task.responseLog += `\n\n[${new Date().toLocaleTimeString()}]\n${JSON.stringify(data, null, 2)}`;
+            const responseEl = $(`task-response-${taskId}`);
+            if (!responseEl) return;
+
+            const previousScrollTop = responseEl.scrollTop;
+            const wasNearBottom = responseEl.scrollTop + responseEl.clientHeight >= responseEl.scrollHeight - 20;
+            responseEl.textContent = `响应\n${task.responseLog}`;
+            if (wasNearBottom) {
+                responseEl.scrollTop = responseEl.scrollHeight;
+            } else {
+                responseEl.scrollTop = previousScrollTop;
+            }
+        }
+
+        async function queryTask(taskId, silent = false) {
+            const task = activeTasks.get(taskId);
+            if (!task) return;
+
+            const url = buildUrl(appConfig.baseUrl, `/api/v1/tasks/${taskId}`);
+            const headers = {};
+            if (appConfig.apiKey) headers.Authorization = `Bearer ${appConfig.apiKey}`;
+
+            const options = {
+                method: "GET",
+                headers
+            };
+
+            try {
+                const response = await fetch(url, options);
+                const text = await response.text();
+                const data = safeJsonParse(text, { raw: text });
+                if (!response.ok) {
+                    throw new Error(typeof data === "object" ? JSON.stringify(data, null, 2) : text);
+                }
+
+                appendTaskResponse(taskId, data);
+
+                const status = normalizeStatus(getValueByPath(data, "status"));
+                const resultUrl = getValueByPath(data, "result.video_url") || "";
+                task.status = status;
+                if (resultUrl) task.resultUrl = resultUrl;
+
+                if (status === "succeeded") {
+                    task.finishedAt = new Date().toISOString();
+                    stopPolling(taskId);
+                    addLog("success", "任务已完成", `任务 ID: ${taskId}\n结果: ${resultUrl || "未返回视频地址"}`);
+                    onTaskSucceeded(taskId);
+                } else if (status === "failed") {
+                    task.finishedAt = new Date().toISOString();
+                    stopPolling(taskId);
+                    addLog("error", "任务执行失败", `任务 ID: ${taskId}`);
+                } else if (!silent) {
+                    addLog("info", "任务轮询中", `任务 ID: ${taskId}\n状态: ${status}`);
+                }
+
+                saveTasks();
+                renderTasks();
+            } catch (error) {
+                if (!silent) addLog("error", "任务查询失败", `任务 ID: ${taskId}\n${error.message}`);
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        function startPolling(taskId) {
+            const task = activeTasks.get(taskId);
+            if (!task) return;
+            stopPolling(taskId);
+            task.status = task.status === "succeeded" || task.status === "failed" ? task.status : "running";
+            const interval = Math.max(5, Number(appConfig.pollInterval || defaults.pollInterval)) * 1000;
+            queryTask(taskId, true);
+            task.timer = setInterval(() => queryTask(taskId, true), interval);
+            saveTasks();
+            renderTasks();
+        }
+
+        function stopPolling(taskId) {
+            const task = activeTasks.get(taskId);
+            if (!task || !task.timer) return;
+            clearInterval(task.timer);
+            task.timer = null;
+        }
+
+        function onTaskSucceeded(taskId) {
+            const task = activeTasks.get(taskId);
+            if (!task) return;
+            if (task.resultUrl) showResult(task.resultUrl, taskId);
+            addHistory({
+                id: task.id,
+                time: task.finishedAt || new Date().toISOString(),
+                sourceUrl: task.videoUrl,
+                resultUrl: task.resultUrl,
+                scene: task.scene,
+                toolVersion: task.toolVersion,
+                resolution: task.resolution,
+                frameRate: task.frameRate
+            });
+            if (task.autoOpenResult && task.resultUrl) {
+                $("resultVideo").scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+            if (task.autoDownload && task.resultUrl) {
+                const link = document.createElement("a");
+                link.href = task.resultUrl;
+                link.download = `${taskId}.mp4`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
+        }
+
+        function showResult(url, taskId = "") {
+            $("resultVideo").src = url;
+            $("resultLinks").innerHTML = `
+                <div class="task-item">
+                    <div class="history-head">
+                        <strong>${escapeHtml(taskId || "结果视频")}</strong>
+                        <span class="subtle">${new Date().toLocaleString()}</span>
+                    </div>
+                    <div class="link-output">
+                        <a href="${url}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveHistory(history) {
+            writeStorage(STORAGE_KEYS.history, history);
+        }
+
+        function addHistory(item) {
+            const history = readStorage(STORAGE_KEYS.history, []);
+            history.unshift(item);
+            const limit = Number(appConfig.historyLimit || defaults.historyLimit);
+            saveHistory(history.slice(0, limit));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const history = readStorage(STORAGE_KEYS.history, []);
+            const list = $("historyList");
+            if (!history.length) {
+                list.innerHTML = '<div class="empty-state">暂无历史记录</div>';
+                return;
+            }
+            list.innerHTML = `<div class="history-grid">${history.map((item, index) => `
+                <div class="history-item">
+                    <div class="history-thumb" onclick="previewHistory(${index})" style="cursor:pointer;">
+                        ${item.resultUrl ? `<video src="${item.resultUrl}" muted preload="metadata"></video>` : ""}
+                    </div>
+                    <div class="history-topline">
+                        <div class="history-title" title="${escapeHtml(item.id || "未命名任务")}">${escapeHtml(item.id || "未命名任务")}</div>
+                        <div class="history-time">${new Date(item.time).toLocaleString()}</div>
+                    </div>
+                    <div class="history-brief">${escapeHtml(item.resolution || "-")} · ${escapeHtml(item.frameRate || "原帧率")}</div>
+                    <div class="history-actions">
+                        <button class="btn btn-success btn-sm" onclick="previewHistory(${index})">预览</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteHistory(${index})">删除</button>
+                        <button class="btn btn-secondary btn-sm collapse-toggle" onclick="openHistoryDetail(${index})">展开参数</button>
+                    </div>
+                </div>
+            `).join("")}</div>`;
+        }
+
+        function openHistoryDetail(index) {
+            const history = readStorage(STORAGE_KEYS.history, []);
+            const item = history[index];
+            if (!item) return;
+            $("historyDetailTitle").textContent = item.id || "历史参数";
+            $("historyDetailTime").textContent = new Date(item.time).toLocaleString();
+            $("historyDetailContent").textContent =
+                `场景: ${item.scene || "-"}\n` +
+                `版本: ${item.toolVersion || "-"}\n` +
+                `分辨率: ${item.resolution || "-"}\n` +
+                `帧率: ${item.frameRate || "原帧率"}\n` +
+                `源视频: ${item.sourceUrl || "-" }\n` +
+                `结果视频: ${item.resultUrl || "-"}`;
+            $("historyDetailModal").classList.add("active");
+        }
+
+        function closeHistoryDetail() {
+            $("historyDetailModal").classList.remove("active");
+        }
+
+        function previewHistory(index) {
+            const history = readStorage(STORAGE_KEYS.history, []);
+            const item = history[index];
+            if (!item?.resultUrl) return;
+            showResult(item.resultUrl, item.id);
+        }
+
+        function deleteHistory(index) {
+            const history = readStorage(STORAGE_KEYS.history, []);
+            history.splice(index, 1);
+            saveHistory(history);
+            renderHistory();
+        }
+
+        function removeTask(taskId) {
+            stopPolling(taskId);
+            activeTasks.delete(taskId);
+            saveTasks();
+            renderTasks();
+        }
+
+        function toggleTaskDetails(taskId) {
+            const task = activeTasks.get(taskId);
+            if (!task) return;
+            task.showDetails = !task.showDetails;
+            saveTasks();
+            renderTasks();
+        }
+
+        function clearCurrentSidebarTab() {
+            if (currentSidebarTab === "tasks") {
+                activeTasks.forEach((task) => stopPolling(task.id));
+                activeTasks.clear();
+                saveTasks();
+                renderTasks();
+            } else {
+                appLogs = [];
+                saveLogs();
+                renderLogs();
+            }
+        }
+
+        function switchSidebarTab(tab) {
+            currentSidebarTab = tab;
+            document.querySelectorAll(".tab-item").forEach((el) => {
+                el.classList.toggle("active", el.dataset.tab === tab);
+            });
+            $("taskList").style.display = tab === "tasks" ? "flex" : "none";
+            $("logList").style.display = tab === "logs" ? "flex" : "none";
+        }
+
+        function exportConfig() {
+            const blob = new Blob([JSON.stringify({
+                config: { ...appConfig, apiKey: appConfig.apiKey || "" },
+                tasks: Array.from(activeTasks.values()).map((task) => ({ ...task, timer: null })),
+                logs: appLogs,
+                history: readStorage(STORAGE_KEYS.history, [])
+            }, null, 2)], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `mediakit-sr-config-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function importConfig(file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const data = JSON.parse(reader.result);
+                    if (data.config) writeStorage(STORAGE_KEYS.config, data.config);
+                    if (data.tasks) writeStorage(STORAGE_KEYS.tasks, data.tasks);
+                    if (data.logs) writeStorage(STORAGE_KEYS.logs, data.logs);
+                    if (data.history) writeStorage(STORAGE_KEYS.history, data.history);
+                    location.reload();
+                } catch (error) {
+                    alert(`导入失败：${error.message}`);
+                }
+            };
+            reader.readAsText(file, "utf-8");
+        }
+
+        function resetLocalData() {
+            if (!confirm("确定清空配置、任务、日志和历史记录吗？")) return;
+            Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+            location.reload();
+        }
+
+        async function manualQuery() {
+            const taskId = $("manualTaskId").value.trim();
+            if (!taskId) {
+                alert("请输入任务 ID。");
+                return;
+            }
+            if (!activeTasks.has(taskId)) {
+                activeTasks.set(taskId, {
+                    id: taskId,
+                    status: "pending",
+                    createdAt: new Date().toISOString(),
+                    finishedAt: null,
+                    scene: "-",
+                    toolVersion: "-",
+                    resolution: "-",
+                    frameRate: "",
+                    videoUrl: "",
+                    requestLog: "手动查询，无提交请求体。",
+                    responseLog: "",
+                    resultUrl: "",
+                    showDetails: true,
+                    autoOpenResult: true,
+                    autoDownload: false,
+                    timer: null
+                });
+            }
+            saveTasks();
+            renderTasks();
+            await queryTask(taskId);
+        }
+
+        window.queryTaskNow = (taskId) => queryTask(taskId);
+        window.toggleTaskDetails = toggleTaskDetails;
+        window.removeTask = removeTask;
+        window.previewResultFromTask = (taskId) => {
+            const task = activeTasks.get(taskId);
+            if (task?.resultUrl) showResult(task.resultUrl, task.id);
+        };
+        window.previewHistory = previewHistory;
+        window.openHistoryDetail = openHistoryDetail;
+        window.deleteHistory = deleteHistory;
+
+        function bindEvents() {
+            $("settingsBtn").addEventListener("click", openSettingsModal);
+            $("closeSettingsBtn").addEventListener("click", closeSettingsModal);
+            $("settingsModal").addEventListener("click", (event) => {
+                if (event.target === $("settingsModal")) closeSettingsModal();
+            });
+            $("closeHistoryDetailBtn").addEventListener("click", closeHistoryDetail);
+            $("historyDetailModal").addEventListener("click", (event) => {
+                if (event.target === $("historyDetailModal")) closeHistoryDetail();
+            });
+            $("saveSettingsBtn").addEventListener("click", () => {
+                saveConfig();
+                closeSettingsModal();
+                addLog("success", "设置已保存", "本地配置已更新");
+            });
+            $("resetStorageBtn").addEventListener("click", resetLocalData);
+            $("uploadDropzone").addEventListener("click", () => $("videoFile").click());
+            $("uploadDropzone").addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    $("videoFile").click();
+                }
+            });
+            $("videoFile").addEventListener("change", (event) => {
+                const file = event.target.files[0] || null;
+                setSelectedUploadFile(file);
+                if (file) uploadToLitterbox();
+            });
+            ["dragenter", "dragover"].forEach((type) => {
+                $("uploadDropzone").addEventListener(type, (event) => {
+                    event.preventDefault();
+                    $("uploadDropzone").classList.add("dragover");
+                });
+            });
+            ["dragleave", "dragend", "drop"].forEach((type) => {
+                $("uploadDropzone").addEventListener(type, (event) => {
+                    event.preventDefault();
+                    if (type !== "drop") $("uploadDropzone").classList.remove("dragover");
+                });
+            });
+            $("uploadDropzone").addEventListener("drop", (event) => {
+                $("uploadDropzone").classList.remove("dragover");
+                const file = getFirstVideoFileFromItems(event.dataTransfer?.files || []);
+                if (!file) {
+                    setUploadPreview("拖拽内容里没有识别到视频文件。", false);
+                    return;
+                }
+                setSelectedUploadFile(file);
+                uploadToLitterbox();
+            });
+            document.addEventListener("paste", (event) => {
+                const file = getFirstVideoFileFromItems(event.clipboardData?.items || []);
+                if (!file) return;
+                event.preventDefault();
+                setSelectedUploadFile(file);
+                addLog("info", "已接收剪贴板视频", file.name);
+                uploadToLitterbox();
+            });
+            $("clearSourceBtn").addEventListener("click", () => {
+                $("videoUrl").value = "";
+                $("videoFile").value = "";
+                selectedUploadFile = null;
+                setUploadPreview("视频源已清空。");
+                updateRequestPreview();
+            });
+            $("refreshPreviewBtn").addEventListener("click", updateRequestPreview);
+            $("submitBtn").addEventListener("click", submitTask);
+            $("queryManualBtn").addEventListener("click", manualQuery);
+            $("clearCurrentTabBtn").addEventListener("click", clearCurrentSidebarTab);
+            $("clearHistoryBtn").addEventListener("click", () => {
+                if (!confirm("确定清空所有历史记录吗？")) return;
+                saveHistory([]);
+                renderHistory();
+            });
+            $("exportBtn").addEventListener("click", exportConfig);
+            $("importBtn").addEventListener("click", () => $("importFile").click());
+            $("importFile").addEventListener("change", (event) => {
+                const file = event.target.files[0];
+                if (file) importConfig(file);
+            });
+            document.querySelectorAll(".tab-item").forEach((item) => {
+                item.addEventListener("click", () => switchSidebarTab(item.dataset.tab));
+            });
+            [
+                "videoUrl", "scene", "resolution", "toolVersion", "frameRate",
+                "resolutionLimit", "baseUrl", "apiKey", "litterboxExpiry",
+                "pollInterval", "taskLimit", "historyLimit"
+            ].forEach((id) => {
+                const el = $(id);
+                if (el) {
+                    const eventName = el.type === "checkbox" ? "change" : "input";
+                    el.addEventListener(eventName, () => {
+                        updateRequestPreview();
+                        saveConfig();
+                    });
+                }
+            });
+        }
+
+        function init() {
+            loadConfig();
+            bindEvents();
+            loadLogs();
+            loadTasks();
+            renderHistory();
+            updateRequestPreview();
+            setUploadPreview("可直接填写视频 URL，或拖拽 / 点击选择 / Ctrl+V 粘贴视频后自动上传到 Litterbox。");
+            addLog("info", "页面初始化完成", "参考页风格、设置、轮询、日志和本地存储已启用");
+        }
+
+        init();
+    </script>
+</body>
+</html>
